@@ -61,6 +61,7 @@ void print_usage() {
    fprintf(stderr, "\t-z, --max_z_speed %d\t\tMax z speed in mm/min\n", DEFAULT_MAX_SPEED);
    fprintf(stderr, "\t-r, --retract_time %f\t\tRetraction time in sec\n", DEFAULT_RETRACT_TIME);
    fprintf(stderr, "\t-p, --prime_time %f\t\tPrime time in sec\n", DEFAULT_PRIME_TIME);
+   fprintf(stderr, "\t    --output_seconds\t\t\tOutput total print time in seconds\n");
    fprintf(stderr, "\t-s, --percent_step 10\t\t\tChange LCD data every ##%%\n");
    fprintf(stderr, "\t-m, --m117_format <format> \t\tformat to write M117 as, e.g.\n\t\t\t\t\t\t\"M117 %%w weeks, %%d days (%%h:%%m:%%s) %%p%%%% remaining\"\n\t\t\t\t\t\t\"M117 %%S seconds to go\"\n");
 #ifndef NOCURL
@@ -269,6 +270,7 @@ int main(int argc, char** argv) {
       {"max_z_speed", required_argument, NULL, 'z'},
       {"retract_time", required_argument, NULL, 'r'},
       {"prime_time", required_argument, NULL, 'p'},
+      {"output_seconds", no_argument, NULL, 1},
       {"percent_step", required_argument, NULL, 's'},
       {"api_url", required_argument, NULL, 'u'},
       {"api_key", required_argument, NULL, 'k'},
@@ -289,13 +291,14 @@ int main(int argc, char** argv) {
    print_settings.ptime         = DEFAULT_PRIME_TIME;          // default prime time
    print_settings.jerk          = false;                       // default we use junction deviation
    print_settings.speedoverride = 1.0;
+   print_settings.output_seconds= false;
    quiet                        = false;
    next_pct                     = 0.9;
    heatup_time                  = 0.0;
    seconds                      = heatup_time;
    apikey                       = NULL;
    apiurl                       = NULL;
-  
+
    int option_index = 0;
 	int getopt_result;
 	while ((getopt_result = getopt_long(argc, argv, "q?hwg:c:a:d:j:x:y:z:r:p:o:s:t:u:k:m:", long_options, &option_index)) != -1) {
@@ -498,7 +501,9 @@ int main(int argc, char** argv) {
 				return (-1);
 			}
 			break;
-
+    case 1:
+      print_settings.output_seconds = true;
+      break;
 		}
 	}
 
@@ -610,11 +615,17 @@ int main(int argc, char** argv) {
 
    fclose(f);
 
-   if (!quiet) {
+   if (print_settings.output_seconds && quiet) {
+      fprintf(stdout, "%li\n", (long int) floor(seconds));
+   } else if (!quiet) {
       fprintf(stdout, "Total time: ");
-      print_timeleft(stdout, (long int) floor(seconds));
+      if (print_settings.output_seconds) {
+        fprintf(stdout, "( %li )\n", (long int) floor(seconds));
+      } else {
+        print_timeleft(stdout, (long int) floor(seconds));
+        fprintf(stdout, "\n");
+      }
       //print_timeleft_f(stdout, m117format, (long int) floor(total_seconds - seconds), (int) floor(next_pct * 100));
-      fprintf(stdout, "\n");
    }
 
    if (output_file != NULL) {

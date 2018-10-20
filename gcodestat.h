@@ -49,6 +49,7 @@ typedef struct {
 	bool eabs;
 	bool mm;
 	bool jerk;
+	bool output_seconds;
 } print_settings_t;
 
 #endif /* GCODESTAT_H_ */

@@ -5,7 +5,7 @@ CURL   := E:\Dev\eclipse-workspace\curl
 
 CC     := gcc
 ARCH   := ${CURL}\lib\libcurl.a
-CFLAGS := -Wall -Werror  
+CFLAGS := -Wall -Werror -O3
 CFCURL := -DCURL_STATICLIB -I${CURL}\include  
 LFLAGS := -L${CURL}\lib
 

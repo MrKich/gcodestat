@@ -14,7 +14,8 @@
 #endif
 
 
-double calcmove(char *,  print_settings_t *);
+double calcmove(char *,  print_settings_t *, bool resetCoords);
+void recordCoordToMinMax3D(minmax3d_t* s, double x, double y, double z);
 
 
 #endif /* CALCMOVE_H_ */

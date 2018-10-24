@@ -22,6 +22,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
+#include <float.h>
 #include <malloc.h>
 #include <sys/time.h>
 
@@ -94,6 +95,24 @@ void print_config(print_settings_t * ps) {
    return;
 }
 
+void initMinMax3D(minmax3d_t* s) {
+  s->min_x = DBL_MAX;
+  s->min_y = DBL_MAX;
+  s->min_z = DBL_MAX;
+  s->max_x = DBL_MIN;
+  s->max_y = DBL_MIN;
+  s->max_z = DBL_MIN;
+}
+
+void printDimensions(FILE* f, minmax3d_t* s) {
+  fprintf(f, "min_x = %f\n", s->min_x);
+  fprintf(f, "min_y = %f\n", s->min_y);
+  fprintf(f, "min_z = %f\n", s->min_z);
+  fprintf(f, "max_x = %f\n", s->max_x);
+  fprintf(f, "max_y = %f\n", s->max_y);
+  fprintf(f, "max_z = %f\n", s->max_z);
+}
+
 // copied function somewhere from the vast internet
 char *str_replace(char *orig, char *rep, char *with) {
     char *result, *ins, *tmp;
@@ -131,7 +150,7 @@ void print_timeleft(FILE* f, long int sec){
 
 void print_timeleft_f(FILE* f, char * sformat, long int sec, int pct){
   int week, day, hour, minute, second;
-  char sweek[4], sday[2], shour[3], sminute[3], ssecond[3], sSec[64], spct[4];
+  char sweek[4], sday[3], shour[4], sminute[4], ssecond[4], sSec[64], spct[4];
   char *stringtowrite = NULL;
   char *tmp;
 
@@ -146,10 +165,10 @@ void print_timeleft_f(FILE* f, char * sformat, long int sec, int pct){
   second =  sec % 60;                 // %s
 
   snprintf(sweek,   4, "%i", week);
-  snprintf(sday,    2, "%i", day );
-  snprintf(shour,   3, "%02i", hour);
-  snprintf(sminute, 3, "%02i", minute);
-  snprintf(ssecond, 3, "%02i", second);
+  snprintf(sday,    3, "%i", day );
+  snprintf(shour,   4, "%02i", hour);
+  snprintf(sminute, 4, "%02i", minute);
+  snprintf(ssecond, 4, "%02i", second);
   snprintf(sSec,   64, "%lu", sec);
   snprintf(spct,    4, "%i", pct);
 
@@ -292,6 +311,8 @@ int main(int argc, char** argv) {
    print_settings.jerk          = false;                       // default we use junction deviation
    print_settings.speedoverride = 1.0;
    print_settings.output_seconds= false;
+   initMinMax3D(&print_settings.minmax3d);
+   print_settings.max_extrusion = 0.0;
    quiet                        = false;
    next_pct                     = 0.9;
    heatup_time                  = 0.0;
@@ -565,7 +586,7 @@ int main(int argc, char** argv) {
 
          switch (gcode(lb)) {
          case GCODE_MOVE:
-            seconds += calcmove(lb, &print_settings);
+            seconds += calcmove(lb, &print_settings, false);
             break;
          case GCODE_DWELL:
             seconds += read_dwell(lb);
@@ -608,6 +629,9 @@ int main(int argc, char** argv) {
          case GCODE_SPEEDOVER:
             read_speedover(lb, &print_settings);
             break;
+          case GCODE_RESET_COORD:
+            calcmove(lb, &print_settings, true);
+            break;
          }
 
       }
@@ -615,9 +639,9 @@ int main(int argc, char** argv) {
 
    fclose(f);
 
-   if (print_settings.output_seconds && quiet) {
-      fprintf(stdout, "%li\n", (long int) floor(seconds));
-   } else if (!quiet) {
+   if (quiet) {
+      fprintf(stdout, "print_time = %li\n", (long int) floor(seconds));
+   } else {
       fprintf(stdout, "Total time: ");
       if (print_settings.output_seconds) {
         fprintf(stdout, "( %li )\n", (long int) floor(seconds));
@@ -627,6 +651,8 @@ int main(int argc, char** argv) {
       }
       //print_timeleft_f(stdout, m117format, (long int) floor(total_seconds - seconds), (int) floor(next_pct * 100));
    }
+   printDimensions(stdout, &print_settings.minmax3d);
+   fprintf(stdout, "max_extrusion = %f\n", print_settings.max_extrusion);
 
    if (output_file != NULL) {
       fprintf(output_file, ";\n; gcodestat\n;  https://github.com/arhi/gcodestat\n");

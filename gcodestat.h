@@ -9,6 +9,7 @@
 #define GCODESTAT_H_
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #define LINE_BUFFER_LENGTH         4096
 #define DEFAULT_ACCELERATION       1000
@@ -34,6 +35,16 @@
 #define GCODE_RLEN      13
 #define GCODE_PLEN      14
 #define GCODE_SPEEDOVER 15
+#define GCODE_RESET_COORD 16
+
+typedef struct {
+  double min_x;
+  double min_y;
+  double min_z;
+  double max_x;
+  double max_y;
+  double max_z;
+} minmax3d_t;
 
 //TODO: make X,Y,Z accel/jdev separately configured
 typedef struct {
@@ -50,6 +61,11 @@ typedef struct {
 	bool mm;
 	bool jerk;
 	bool output_seconds;
+	minmax3d_t minmax3d;
+	double max_extrusion;
 } print_settings_t;
+
+void initMinMax3D(minmax3d_t* s);
+void printDimensions(FILE* f, minmax3d_t* s);
 
 #endif /* GCODESTAT_H_ */

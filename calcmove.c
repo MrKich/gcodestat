@@ -18,7 +18,19 @@
 #include <stdbool.h>
 #include "calcmove.h"
 
-double calcmove(char * buffer,  print_settings_t * print_settings){
+
+void recordCoordToMinMax3D(minmax3d_t* s, double x, double y, double z) {
+  s->min_x = fmin(x, s->min_x);
+  s->min_y = fmin(y, s->min_y);
+  s->min_z = fmin(z, s->min_z);
+  s->max_x = fmax(x, s->max_x);
+  s->max_y = fmax(y, s->max_y);
+  s->max_z = fmax(z, s->max_z);
+  // fprintf(stdout, "%f\n", z);
+}
+
+
+double calcmove(char * buffer,  print_settings_t * print_settings, bool resetCoords) {
   static double oldx = 0;        //old values required for sticky paremeters and other calcs
   static double oldy = 0;
   static double oldz = 0;
@@ -30,17 +42,21 @@ double calcmove(char * buffer,  print_settings_t * print_settings){
   static double oldza    = 0;
 
   static double oldspeed = 0;    //speed previous move ended (start speed for current move)
+  static double totalExtrusion = 0;
 
 
   double ret;
   double distance;
   double costheta;
   double xa,ya,za;
-  double sin_theta_d2; 
+  double sin_theta_d2;
   double speed ;
   double x,y,z,e,f;
   char   c;
   double Ta,Td,Sa,Sd,Ts;
+  bool isMoving = false;
+  bool isExtruding = false;
+  bool isCoordsReset = false;
 
   speed = 0;
   char * buff;
@@ -62,18 +78,62 @@ double calcmove(char * buffer,  print_settings_t * print_settings){
           case 'X':
           case 'x':
             x = atof(buff++);
+            if (!print_settings->abs) {
+              x += oldx;
+            }
+            isMoving = true;
+            if (resetCoords) {
+              oldx = 0;
+              x = 0;
+              isCoordsReset = true;
+            }
             break;
           case 'Y':
           case 'y':
             y = atof(buff++);
+            if (!print_settings->abs) {
+              y += oldy;
+            }
+            isMoving = true;
+            if (resetCoords) {
+              oldy = 0;
+              y = 0;
+              isCoordsReset = true;
+            }
             break;
           case 'Z':
           case 'z':
             z = atof(buff++);
+            if (!print_settings->abs) {
+              z += oldz;
+            }
+            isMoving = true;
+            if (resetCoords) {
+              oldz = 0;
+              z = 0;
+              isCoordsReset = true;
+            }
             break;
           case 'E':
           case 'e':
             e = atof(buff++);
+
+            if (resetCoords) {
+              olde = 0;
+              e = 0;
+              isCoordsReset = true;
+            }
+
+            if (e > 0.0f) {
+              isExtruding = true;
+            }
+
+            if (!print_settings->eabs) {
+              totalExtrusion += e;
+              e += olde;
+            } else {
+              totalExtrusion += e - olde;
+            }
             break;
           case 'F':
           case 'f':
@@ -90,17 +150,20 @@ double calcmove(char * buffer,  print_settings_t * print_settings){
     }
   }
 
-  if (!print_settings->abs){
-     x+=oldx;
-     y+=oldy;
-     z+=oldz;
+  if (resetCoords && !isCoordsReset) {
+    oldx = x = 0;
+    oldy = y = 0;
+    oldz = z = 0;
+    olde = e = 0;
   }
-  if (!print_settings->eabs) e += olde;
+
+  print_settings->max_extrusion = fmax(print_settings->max_extrusion, totalExtrusion);
 
   ret = 0.0;
-  distance = sqrt(pow((x - oldx),2) + pow((y-oldy),2) + pow((z-oldz),2)); 
+  distance = sqrt(pow((x - oldx),2) + pow((y-oldy),2) + pow((z-oldz),2));
   if (distance == 0.0){
     oldf = f;
+    olde = e;
     return 0;
   }
 
@@ -147,6 +210,10 @@ double calcmove(char * buffer,  print_settings_t * print_settings){
 		ret = Ta + Ts + Td;
 		oldspeed = speed;
 	}
+
+  if (isMoving && isExtruding) {
+    recordCoordToMinMax3D(&print_settings->minmax3d, x, y, z);
+  }
 
 	oldx = x;
 	oldy = y;

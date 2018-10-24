@@ -74,6 +74,8 @@ int gcode(char *buffer) {
 				return GCODE_ABS;
 			case 91:
 				return GCODE_REL;
+            case 92:
+                return GCODE_RESET_COORD;
 
 			default:
 				return GCODE_IRRELEVANT;
@@ -153,7 +155,7 @@ double read_dwell(char *buffer){
  * M203
  */
 int read_maxfeed(char *buff, print_settings_t *print_settings){
-   double X,Y,Z;
+   double X = 0,Y = 0,Z = 0;
 	read_gvalue(buff, 'X', &X);
 	read_gvalue(buff, 'Y', &Y);
 	read_gvalue(buff, 'Z', &Z);
@@ -194,7 +196,7 @@ int read_jdev(char* buffer, print_settings_t *print_settings){
  * M220
  */
 int read_speedover(char* buffer, print_settings_t *print_settings){
-   double S;
+   double S = 0;
 	read_gvalue(buffer, 'S', &S);
 	if (S > 0) print_settings->speedoverride = S;
 	return (0);

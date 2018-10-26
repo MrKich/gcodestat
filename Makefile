@@ -10,7 +10,10 @@ CFCURL := -DCURL_STATICLIB -I${CURL}\include
 LFLAGS := -L${CURL}\lib
 
 ifeq ($(STATIC),1)
-SLIBS  := -static -static-libgcc -lgcc -lws2_32 -lwldap32 
+SLIBS  := -static -static-libgcc -lgcc
+ifeq ($(NOCURL),0)
+SLIBS  := ${SLIBS} -lws2_32 -lwldap32
+endif
 else
 SLIBS  :=
 endif
